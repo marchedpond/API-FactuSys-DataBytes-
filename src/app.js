@@ -9,17 +9,17 @@ require('dotenv').config();
 const logger = require('./utils/logger');
 const errorHandler = require('./middlewares/errorHandler');
 const routes = require('./routes');
+const db = require('./models'); // Sequelize
 
 const app = express();
 
 // Rate limiting
 const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutos
-    max: 100, // máximo 100 requests por IP
+    windowMs: 15 * 60 * 1000,
+    max: 100,
     message: 'Demasiadas solicitudes desde esta IP, inténtalo de nuevo más tarde.'
 });
 
-// Middlewares de seguridad y configuración
 app.use(helmet());
 app.use(compression());
 app.use(limiter);
@@ -31,10 +31,8 @@ app.use(morgan('combined', { stream: { write: message => logger.info(message.tri
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Rutas
 app.use('/api', routes);
 
-// Ruta de salud
 app.get('/health', (req, res) => {
     res.status(200).json({
         status: 'OK',
@@ -43,7 +41,6 @@ app.get('/health', (req, res) => {
     });
 });
 
-// Manejo de rutas no encontradas
 app.use('*', (req, res) => {
     res.status(404).json({
         success: false,
@@ -51,14 +48,47 @@ app.use('*', (req, res) => {
     });
 });
 
-// Middleware de manejo de errores
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
-    logger.info(`Servidor corriendo en puerto ${PORT}`);
-    logger.info(`Ambiente: ${process.env.NODE_ENV || 'development'}`);
+app.listen(PORT, async () => {
+    try {
+        await db.sequelize.authenticate();
+
+        const [results] = await db.sequelize.query(`
+            SELECT COUNT(*) AS total
+            FROM information_schema.tables
+            WHERE table_schema = 'public'
+        `);
+        const totalTablas = results[0].total;
+
+        console.log("=======================================");
+        console.log("📡 FactuSys API Iniciada");
+        console.log(`📍 Puerto:        ${PORT}`);
+        console.log(`🌍 Ambiente:      ${process.env.NODE_ENV || 'development'}`);
+        console.log(`🕒 Inicio:        ${new Date().toLocaleString()}`);
+        console.log("---------------------------------------");
+        console.log("📂 Base de datos:");
+        console.log(`   Nombre: ${process.env.DB_NAME}`);
+        console.log(`   Host:   ${process.env.DB_HOST}`);
+        console.log("   ✔ Conectada correctamente");
+        console.log(`   Tablas cargadas: ${totalTablas}`);
+        console.log("---------------------------------------");
+        console.log("📡 Rutas principales:");
+        console.log("   /api/auth      → Autenticación");
+        console.log("   /api/empresas  → Gestión de empresas");
+        console.log("   /api/clientes  → Gestión de clientes");
+        console.log("   /api/productos → Gestión de productos");
+        console.log("   /api/facturas  → Gestión de facturas");
+        console.log("   /api/docs      → Swagger Docs");
+        console.log("=======================================");
+    } catch (error) {
+        console.log("=======================================");
+        console.log("❌ Error al conectar la base de datos");
+        console.log(error.message);
+        console.log("=======================================");
+    }
 });
 
 module.exports = app;
