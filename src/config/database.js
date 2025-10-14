@@ -1,14 +1,22 @@
 const { Sequelize } = require('sequelize');
 const logger = require('../utils/logger');
 
+// Proveer valores por defecto para evitar que Sequelize lance errores
+const DB_NAME = process.env.DB_NAME || 'factusys_db';
+const DB_USERNAME = process.env.DB_USERNAME || 'postgres';
+const DB_PASSWORD = process.env.DB_PASSWORD || '1234';
+const DB_HOST = process.env.DB_HOST || 'localhost';
+const DB_PORT = process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : 5432;
+const DB_DIALECT = process.env.DB_DIALECT || 'postgres';
+
 const sequelize = new Sequelize(
-    process.env.DB_NAME,
-    process.env.DB_USERNAME,
-    process.env.DB_PASSWORD,
+    DB_NAME,
+    DB_USERNAME,
+    DB_PASSWORD,
     {
-        host: process.env.DB_HOST,
-        port: process.env.DB_PORT,
-        dialect: process.env.DB_DIALECT,
+        host: DB_HOST,
+        port: DB_PORT,
+        dialect: DB_DIALECT,
         logging: process.env.NODE_ENV === 'development' ?
             (msg) => logger.debug(msg) : false,
         pool: {
