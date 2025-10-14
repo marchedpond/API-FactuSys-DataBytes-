@@ -52,43 +52,46 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, async () => {
-    try {
-        await db.sequelize.authenticate();
+// Solo iniciar el servidor y conectar la BD si no estamos en entorno de test
+if (process.env.NODE_ENV !== 'test') {
+    app.listen(PORT, async () => {
+        try {
+            await db.sequelize.authenticate();
 
-        const [results] = await db.sequelize.query(`
-            SELECT COUNT(*) AS total
-            FROM information_schema.tables
-            WHERE table_schema = 'public'
-        `);
-        const totalTablas = results[0].total;
+            const [results] = await db.sequelize.query(`
+                SELECT COUNT(*) AS total
+                FROM information_schema.tables
+                WHERE table_schema = 'public'
+            `);
+            const totalTablas = results[0].total;
 
-        console.log("=======================================");
-        console.log("📡 FactuSys API Iniciada");
-        console.log(`📍 Puerto:        ${PORT}`);
-        console.log(`🌍 Ambiente:      ${process.env.NODE_ENV || 'development'}`);
-        console.log(`🕒 Inicio:        ${new Date().toLocaleString()}`);
-        console.log("---------------------------------------");
-        console.log("📂 Base de datos:");
-        console.log(`   Nombre: ${process.env.DB_NAME}`);
-        console.log(`   Host:   ${process.env.DB_HOST}`);
-        console.log("   ✔ Conectada correctamente");
-        console.log(`   Tablas cargadas: ${totalTablas}`);
-        console.log("---------------------------------------");
-        console.log("📡 Rutas principales:");
-        console.log("   /api/auth      → Autenticación");
-        console.log("   /api/empresas  → Gestión de empresas");
-        console.log("   /api/clientes  → Gestión de clientes");
-        console.log("   /api/productos → Gestión de productos");
-        console.log("   /api/facturas  → Gestión de facturas");
-        console.log("   /api/docs      → Swagger Docs");
-        console.log("=======================================");
-    } catch (error) {
-        console.log("=======================================");
-        console.log("❌ Error al conectar la base de datos");
-        console.log(error.message);
-        console.log("=======================================");
-    }
-});
+            console.log("=======================================");
+            console.log("📡 FactuSys API Iniciada");
+            console.log(`📍 Puerto:        ${PORT}`);
+            console.log(`🌍 Ambiente:      ${process.env.NODE_ENV || 'development'}`);
+            console.log(`🕒 Inicio:        ${new Date().toLocaleString()}`);
+            console.log("---------------------------------------");
+            console.log("📂 Base de datos:");
+            console.log(`   Nombre: ${process.env.DB_NAME}`);
+            console.log(`   Host:   ${process.env.DB_HOST}`);
+            console.log("   ✔ Conectada correctamente");
+            console.log(`   Tablas cargadas: ${totalTablas}`);
+            console.log("---------------------------------------");
+            console.log("📡 Rutas principales:");
+            console.log("   /api/auth      → Autenticación");
+            console.log("   /api/empresas  → Gestión de empresas");
+            console.log("   /api/clientes  → Gestión de clientes");
+            console.log("   /api/productos → Gestión de productos");
+            console.log("   /api/facturas  → Gestión de facturas");
+            console.log("   /api/docs      → Swagger Docs");
+            console.log("=======================================");
+        } catch (error) {
+            console.log("=======================================");
+            console.log("❌ Error al conectar la base de datos");
+            console.log(error.message);
+            console.log("=======================================");
+        }
+    });
+}
 
 module.exports = app;
