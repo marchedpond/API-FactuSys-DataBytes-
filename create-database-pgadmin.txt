@@ -1,0 +1,316 @@
+-- Script completo para crear esquema y datos iniciales de FactuSys
+-- Copia y pega en pgAdmin -> Query Tool (ejecuta paso a paso: crear rol/DB, luego conectar a la DB y crear tablas)
+
+-- ***************
+-- 1) Crear rol/usuario (ajusta nombre y contraseña)
+-- ***************
+-- Reemplaza 'factusys_user' y 'password' por los valores deseados
+CREATE ROLE factusys_user LOGIN PASSWORD 'password';
+
+-- ***************
+-- 2) Crear base de datos y asignar propietario
+-- ***************
+CREATE DATABASE factusys_db OWNER factusys_user;
+
+-- Concede permisos básicos
+GRANT ALL PRIVILEGES ON DATABASE factusys_db TO factusys_user;
+
+-- ***************
+-- 3) Conectarse a la base de datos y crear extensiones necesarias
+-- En pgAdmin cambia la conexión a 'factusys_db' y ejecuta la sección siguiente
+-- ***************
+\c factusys_db
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- ***************
+-- 4) Crear tablas (equivalente a los modelos Sequelize)
+-- Nota: Los nombres de tablas y columnas siguen los definidos en los modelos
+-- ***************
+
+-- Tabla empresas
+CREATE TABLE empresas (
+	id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+	nombre VARCHAR(200) NOT NULL,
+	nit VARCHAR(20) NOT NULL UNIQUE,
+	direccion TEXT NOT NULL,
+	telefono VARCHAR(20),
+	email VARCHAR(150) NOT NULL,
+	representante_legal VARCHAR(200) NOT NULL,
+	actividad_economica VARCHAR(500) NOT NULL,
+	regimen_tributario VARCHAR(50) DEFAULT 'general',
+	codigo_establecimiento VARCHAR(10),
+	codigo_punto_venta VARCHAR(10),
+	codigo_actividad VARCHAR(10),
+	logo_url VARCHAR(500),
+	activa BOOLEAN DEFAULT true,
+	created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+	updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+	deleted_at TIMESTAMP WITH TIME ZONE
+);
+
+-- Tabla usuarios
+CREATE TABLE usuarios (
+	id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+	nombre VARCHAR(100) NOT NULL,
+	apellido VARCHAR(100) NOT NULL,
+	email VARCHAR(150) NOT NULL UNIQUE,
+	password VARCHAR(255) NOT NULL,
+	telefono VARCHAR(20),
+	rol VARCHAR(20) NOT NULL DEFAULT 'vendedor',
+	activo BOOLEAN DEFAULT true,
+	ultimo_acceso TIMESTAMP WITH TIME ZONE,
+	empresa_id UUID,
+	created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+	updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+	deleted_at TIMESTAMP WITH TIME ZONE,
+	CONSTRAINT fk_usuarios_empresa FOREIGN KEY (empresa_id) REFERENCES empresas(id)
+);
+
+-- Tabla categorias
+CREATE TABLE categorias (
+	id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+	nombre VARCHAR(100) NOT NULL,
+	descripcion TEXT,
+	activa BOOLEAN DEFAULT true,
+	empresa_id UUID NOT NULL,
+	created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+	updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+	deleted_at TIMESTAMP WITH TIME ZONE,
+	CONSTRAINT fk_categorias_empresa FOREIGN KEY (empresa_id) REFERENCES empresas(id)
+);
+
+-- Tabla productos
+CREATE TABLE productos (
+	id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+	codigo VARCHAR(50) NOT NULL UNIQUE,
+	codigo_barras VARCHAR(50) UNIQUE,
+	nombre VARCHAR(200) NOT NULL,
+	descripcion TEXT,
+	precio_venta NUMERIC(15,2) NOT NULL DEFAULT 0,
+	precio_compra NUMERIC(15,2),
+	costo_unitario NUMERIC(15,2),
+	stock_actual NUMERIC(10,2) DEFAULT 0,
+	stock_minimo NUMERIC(10,2) DEFAULT 0,
+	unidad_medida VARCHAR(20) DEFAULT 'unidad',
+	tipo_producto VARCHAR(20) DEFAULT 'producto',
+	exento_impuestos BOOLEAN DEFAULT false,
+	activo BOOLEAN DEFAULT true,
+	imagen_url VARCHAR(500),
+	categoria_id UUID NOT NULL,
+	empresa_id UUID NOT NULL,
+	created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+	updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+	deleted_at TIMESTAMP WITH TIME ZONE,
+	CONSTRAINT fk_productos_categoria FOREIGN KEY (categoria_id) REFERENCES categorias(id),
+	CONSTRAINT fk_productos_empresa FOREIGN KEY (empresa_id) REFERENCES empresas(id)
+);
+
+-- Tabla impuestos
+CREATE TABLE impuestos (
+	id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+	nombre VARCHAR(100) NOT NULL,
+	codigo VARCHAR(20) NOT NULL UNIQUE,
+	porcentaje NUMERIC(5,2) NOT NULL,
+	tipo_impuesto VARCHAR(50) NOT NULL,
+	aplicable_por_defecto BOOLEAN DEFAULT false,
+	activo BOOLEAN DEFAULT true,
+	empresa_id UUID NOT NULL,
+	created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+	updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+	deleted_at TIMESTAMP WITH TIME ZONE,
+	CONSTRAINT fk_impuestos_empresa FOREIGN KEY (empresa_id) REFERENCES empresas(id)
+);
+
+	-- Tabla clientes
+	CREATE TABLE clientes (
+		id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+		codigo VARCHAR(20) NOT NULL UNIQUE,
+		tipo_cliente VARCHAR(50) NOT NULL,
+		nombre VARCHAR(200) NOT NULL,
+		apellido VARCHAR(200),
+		nit VARCHAR(20) UNIQUE,
+		dui VARCHAR(15) UNIQUE,
+		direccion TEXT NOT NULL,
+		telefono VARCHAR(20),
+		email VARCHAR(150),
+		limite_credito NUMERIC(15,2) DEFAULT 0.00,
+		saldo_actual NUMERIC(15,2) DEFAULT 0.00,
+		dias_credito INTEGER DEFAULT 0,
+		exento_impuestos BOOLEAN DEFAULT false,
+		activo BOOLEAN DEFAULT true,
+		empresa_id UUID NOT NULL,
+		created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+		updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+		deleted_at TIMESTAMP WITH TIME ZONE,
+		CONSTRAINT fk_clientes_empresa FOREIGN KEY (empresa_id) REFERENCES empresas(id)
+	);
+
+-- Tabla facturas
+CREATE TABLE facturas (
+	id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+	numero_factura VARCHAR(50) NOT NULL UNIQUE,
+	serie VARCHAR(10) NOT NULL,
+	tipo_documento VARCHAR(50) DEFAULT 'factura',
+	fecha_emision TIMESTAMP WITH TIME ZONE NOT NULL,
+	fecha_vencimiento TIMESTAMP WITH TIME ZONE,
+	fecha_pago TIMESTAMP WITH TIME ZONE,
+	estado VARCHAR(50) DEFAULT 'borrador',
+	subtotal NUMERIC(15,2) DEFAULT 0,
+	total_impuestos NUMERIC(15,2) DEFAULT 0,
+	descuento_global NUMERIC(15,2) DEFAULT 0,
+	total NUMERIC(15,2) DEFAULT 0,
+	metodo_pago VARCHAR(50),
+	observaciones TEXT,
+	xml_generado TEXT,
+	xml_firmado TEXT,
+	respuesta_hacienda JSON,
+	codigo_autorizacion VARCHAR(100),
+	fecha_autorizacion TIMESTAMP WITH TIME ZONE,
+	cliente_id UUID NOT NULL,
+	usuario_id UUID NOT NULL,
+	empresa_id UUID NOT NULL,
+	created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+	updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+	deleted_at TIMESTAMP WITH TIME ZONE,
+	CONSTRAINT fk_facturas_cliente FOREIGN KEY (cliente_id) REFERENCES clientes(id),
+	CONSTRAINT fk_facturas_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
+	CONSTRAINT fk_facturas_empresa FOREIGN KEY (empresa_id) REFERENCES empresas(id)
+);
+
+-- Tabla detalles_factura
+CREATE TABLE detalles_factura (
+	id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+	cantidad NUMERIC(10,2) NOT NULL,
+	precio_unitario NUMERIC(15,2) NOT NULL,
+	descuento NUMERIC(15,2) DEFAULT 0,
+	subtotal NUMERIC(15,2) NOT NULL,
+	total_impuestos NUMERIC(15,2) DEFAULT 0,
+	total NUMERIC(15,2) NOT NULL,
+	descripcion_adicional TEXT,
+	factura_id UUID NOT NULL,
+	producto_id UUID,
+	created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+	updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+	deleted_at TIMESTAMP WITH TIME ZONE,
+	CONSTRAINT fk_detalles_factura_factura FOREIGN KEY (factura_id) REFERENCES facturas(id),
+	CONSTRAINT fk_detalles_factura_producto FOREIGN KEY (producto_id) REFERENCES productos(id)
+);
+
+-- Tabla detalles_impuesto
+CREATE TABLE detalles_impuesto (
+	id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+	base_imponible NUMERIC(15,2) NOT NULL,
+	porcentaje NUMERIC(5,2) NOT NULL,
+	monto NUMERIC(15,2) NOT NULL,
+	detalle_factura_id UUID NOT NULL,
+	impuesto_id UUID NOT NULL,
+	created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+	updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+	deleted_at TIMESTAMP WITH TIME ZONE,
+	CONSTRAINT fk_detalles_impuesto_detalle FOREIGN KEY (detalle_factura_id) REFERENCES detalles_factura(id),
+	CONSTRAINT fk_detalles_impuesto_impuesto FOREIGN KEY (impuesto_id) REFERENCES impuestos(id)
+);
+
+-- Tabla pagos
+CREATE TABLE pagos (
+	id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+	monto NUMERIC(15,2) NOT NULL,
+	fecha_pago TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+	metodo_pago VARCHAR(50) NOT NULL,
+	referencia VARCHAR(100),
+	banco VARCHAR(100),
+	numero_cheque VARCHAR(50),
+	observaciones TEXT,
+	factura_id UUID NOT NULL,
+	usuario_id UUID NOT NULL,
+	created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+	updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+	deleted_at TIMESTAMP WITH TIME ZONE,
+	CONSTRAINT fk_pagos_factura FOREIGN KEY (factura_id) REFERENCES facturas(id),
+	CONSTRAINT fk_pagos_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+);
+
+-- ***************
+-- 5) Datos iniciales (seed)
+-- Ejecutar conectado a factusys_db
+-- ***************
+
+-- Crear empresa de ejemplo
+INSERT INTO empresas (id, nombre, nit, direccion, telefono, email, representante_legal, actividad_economica, regimen_tributario, codigo_establecimiento, codigo_punto_venta, codigo_actividad, activa, created_at, updated_at)
+VALUES (
+	uuid_generate_v4(),
+	'Mi Empresa S.A. de C.V.',
+	'0614-123456-123-4',
+	'San Salvador, El Salvador',
+	'+503 2222-2222',
+	'info@miempresa.com',
+	'Juan Pérez',
+	'Comercio al por menor',
+	'general',
+	'00000001',
+	'00001',
+	'47110',
+	true,
+	now(),
+	now()
+);
+
+-- Obtener el id de la empresa insertada para relacionar otros registros
+-- Nota: asume que sólo hay una empresa con el NIT de ejemplo
+DO $$
+DECLARE
+	empresa_uuid UUID;
+BEGIN
+	SELECT id INTO empresa_uuid FROM empresas WHERE nit = '0614-123456-123-4' LIMIT 1;
+
+	-- Insertar usuario admin con password hasheado
+	INSERT INTO usuarios (id, nombre, apellido, email, password, telefono, rol, activo, empresa_id, created_at, updated_at)
+	VALUES (
+		uuid_generate_v4(),
+		'Administrador',
+		'Sistema',
+		'admin@miempresa.com',
+		'$2a$12$OeSN116/NUXB9VTyixrOLu9g1CLGuoxN4wN0KS5o/mGBQbkTSdg26', -- hash bcrypt de 'admin123'
+		'+503 2222-2222',
+		'admin',
+		true,
+		empresa_uuid,
+		now(),
+		now()
+	);
+
+	-- Insertar categorias
+	INSERT INTO categorias (id, nombre, descripcion, activa, empresa_id, created_at, updated_at)
+	VALUES
+		(uuid_generate_v4(), 'Electrónicos', 'Productos electrónicos y tecnológicos', true, empresa_uuid, now(), now()),
+		(uuid_generate_v4(), 'Ropa', 'Vestimenta y accesorios', true, empresa_uuid, now(), now()),
+		(uuid_generate_v4(), 'Hogar', 'Artículos para el hogar', true, empresa_uuid, now(), now()),
+		(uuid_generate_v4(), 'Servicios', 'Servicios profesionales', true, empresa_uuid, now(), now());
+
+	-- Insertar impuestos
+	INSERT INTO impuestos (id, nombre, codigo, porcentaje, tipo_impuesto, aplicable_por_defecto, activo, empresa_id, created_at, updated_at)
+	VALUES
+		(uuid_generate_v4(), 'IVA', '20', 13.00, 'iva', true, true, empresa_uuid, now(), now()),
+		(uuid_generate_v4(), 'Impuesto Municipal', '21', 1.00, 'municipal', false, true, empresa_uuid, now(), now());
+
+	-- Insertar productos: se asume que las categorias fueron creadas arriba; para simplicidad se vinculan por subconsulta
+	INSERT INTO productos (id, codigo, codigo_barras, nombre, descripcion, precio_venta, precio_compra, costo_unitario, stock_actual, stock_minimo, unidad_medida, tipo_producto, exento_impuestos, activo, categoria_id, empresa_id, created_at, updated_at)
+	VALUES (
+		uuid_generate_v4(), 'PROD001', '1234567890123', 'Laptop Dell Inspiron', 'Laptop Dell Inspiron 15 3000, Intel Core i5, 8GB RAM, 256GB SSD', 899.99, 650.00, 700.00, 10.00, 2.00, 'unidad', 'producto', false, true, (SELECT id FROM categorias WHERE nombre = 'Electrónicos' AND empresa_id = empresa_uuid LIMIT 1), empresa_uuid, now(), now()
+	), (
+		uuid_generate_v4(), 'PROD002', '1234567890124', 'Camisa Polo', 'Camisa polo de algodón, varios colores', 25.99, 15.50, 18.00, 50.00, 10.00, 'unidad', 'producto', false, true, (SELECT id FROM categorias WHERE nombre = 'Ropa' AND empresa_id = empresa_uuid LIMIT 1), empresa_uuid, now(), now()
+	), (
+		uuid_generate_v4(), 'SERV001', NULL, 'Consultoría IT', 'Servicio de consultoría en tecnología de la información', 75.00, 0.00, 0.00, 0.00, 0.00, 'hora', 'servicio', false, true, (SELECT id FROM categorias WHERE nombre = 'Servicios' AND empresa_id = empresa_uuid LIMIT 1), empresa_uuid, now(), now()
+	);
+
+	-- Insertar clientes
+	INSERT INTO clientes (id, codigo, tipo_cliente, nombre, apellido, dui, direccion, telefono, email, limite_credito, saldo_actual, dias_credito, exento_impuestos, activo, empresa_id, created_at, updated_at)
+	VALUES (
+		uuid_generate_v4(), 'CLI000001', 'persona_natural', 'María', 'González', '12345678-9', 'San Salvador, El Salvador', '+503 7777-7777', 'maria.gonzalez@email.com', 1000.00, 0.00, 30, false, true, empresa_uuid, now(), now()
+	), (
+		uuid_generate_v4(), 'CLI000002', 'persona_juridica', 'Empresa Cliente S.A. de C.V.', NULL, NULL, 'Santa Ana, El Salvador', '+503 8888-8888', 'contacto@empresacliente.com', 5000.00, 0.00, 45, false, true, empresa_uuid, now(), now()
+	);
+
+END $$;
+
+-- FIN del script
