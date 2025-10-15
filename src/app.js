@@ -52,19 +52,18 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
 
-// Solo iniciar el servidor y conectar la BD si no estamos en entorno de test
-if (process.env.NODE_ENV !== 'test') {
-    app.listen(PORT, async () => {
-        try {
-            await db.sequelize.authenticate();
+const startServer = async () => {
+    try {
+        await db.sequelize.authenticate();
 
-            const [results] = await db.sequelize.query(`
-                SELECT COUNT(*) AS total
-                FROM information_schema.tables
-                WHERE table_schema = 'public'
-            `);
-            const totalTablas = results[0].total;
+        const [results] = await db.sequelize.query(`
+            SELECT COUNT(*) AS total
+            FROM information_schema.tables
+            WHERE table_schema = 'public'
+        `);
+        const totalTablas = results[0].total;
 
+        app.listen(PORT, () => {
             console.log("=======================================");
             console.log("📡 FactuSys API Iniciada");
             console.log(`📍 Puerto:        ${PORT}`);
@@ -85,13 +84,19 @@ if (process.env.NODE_ENV !== 'test') {
             console.log("   /api/facturas  → Gestión de facturas");
             console.log("   /api/docs      → Swagger Docs");
             console.log("=======================================");
-        } catch (error) {
-            console.log("=======================================");
-            console.log("❌ Error al conectar la base de datos");
-            console.log(error.message);
-            console.log("=======================================");
-        }
-    });
+        });
+    } catch (error) {
+        console.log("=======================================");
+        console.log("❌ Error al iniciar la aplicación");
+        console.log(error.message);
+        console.log("=======================================");
+        process.exit(1); // Salir si la conexión a la BD falla
+    }
+};
+
+// Solo iniciar el servidor y conectar la BD si no estamos en entorno de test
+if (process.env.NODE_ENV !== 'test') {
+    startServer();
 }
 
 module.exports = app;
