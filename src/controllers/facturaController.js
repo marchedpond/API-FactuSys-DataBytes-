@@ -267,7 +267,7 @@ const createFactura = async (req, res, next) => {
                         porcentaje: impuesto.porcentaje
                     }, { transaction });
 
-                    impuestosDetalle += detalleImpuesto.monto;
+                    impuestosDetalle += parseFloat(detalleImpuesto.monto);
                 }
             }
 

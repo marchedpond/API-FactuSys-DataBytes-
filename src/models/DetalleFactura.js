@@ -1,5 +1,5 @@
 const { DataTypes } = require('sequelize');
-const { sequelize } = require('../config/database');
+const { sequelize } = require('../config/sequelize');
 
 const DetalleFactura = sequelize.define('DetalleFactura', {
     id: {
@@ -32,6 +32,7 @@ const DetalleFactura = sequelize.define('DetalleFactura', {
     subtotal: {
         type: DataTypes.DECIMAL(15, 2),
         allowNull: false,
+        defaultValue: 0.00,
         validate: {
             min: 0
         }
@@ -47,6 +48,7 @@ const DetalleFactura = sequelize.define('DetalleFactura', {
     total: {
         type: DataTypes.DECIMAL(15, 2),
         allowNull: false,
+        defaultValue: 0.00,
         validate: {
             min: 0
         }
