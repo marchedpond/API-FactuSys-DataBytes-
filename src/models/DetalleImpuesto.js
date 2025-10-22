@@ -1,5 +1,5 @@
 const { DataTypes } = require('sequelize');
-const { sequelize } = require('../config/database');
+const { sequelize } = require('../config/sequelize');
 
 const DetalleImpuesto = sequelize.define('DetalleImpuesto', {
     id: {
@@ -25,6 +25,7 @@ const DetalleImpuesto = sequelize.define('DetalleImpuesto', {
     monto: {
         type: DataTypes.DECIMAL(15, 2),
         allowNull: false,
+        defaultValue: 0.00,
         validate: {
             min: 0
         }
