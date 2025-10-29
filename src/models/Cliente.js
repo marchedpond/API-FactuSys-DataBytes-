@@ -87,10 +87,24 @@ const Cliente = sequelize.define('Cliente', {
 }, {
     tableName: 'clientes',
     hooks: {
-        beforeCreate: async (cliente) => {
-            if (!cliente.codigo) {
-                const count = await Cliente.count();
-                cliente.codigo = `CLI${String(count + 1).padStart(6, '0')}`;
+        beforeValidate: async (cliente) => {
+            if (!cliente.codigo || (typeof cliente.codigo === 'string' && cliente.codigo.trim() === '')) {
+                // Generador robusto de código único
+                const generateCode = () => {
+                    const ts = Date.now().toString().slice(-6);
+                    const rand = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+                    return `CLI${ts}${rand}`;
+                };
+                let attempts = 0;
+                let code = generateCode();
+                // Reintentar pocas veces si hay colisión
+                while (attempts < 5) {
+                    const exists = await Cliente.count({ where: { codigo: code } });
+                    if (exists === 0) break;
+                    code = generateCode();
+                    attempts += 1;
+                }
+                cliente.codigo = code;
             }
         }
     }

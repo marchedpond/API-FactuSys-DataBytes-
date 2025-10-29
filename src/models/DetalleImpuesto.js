@@ -47,7 +47,7 @@ const DetalleImpuesto = sequelize.define('DetalleImpuesto', {
         }
     }
 }, {
-    tableName: 'detalles_impuesto',
+    tableName: 'detalle_impuestos',
     hooks: {
         beforeCreate: async (detalle) => {
             detalle.monto = (detalle.base_imponible * detalle.porcentaje) / 100;

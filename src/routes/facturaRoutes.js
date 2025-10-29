@@ -543,4 +543,43 @@ router.post('/:id/emitir', authenticate, checkEmpresa, validateUUID, facturaCont
  */
 router.post('/:id/anular', authenticate, checkEmpresa, validateUUID, facturaController.anularFactura);
 
+/**
+ * @swagger
+ * /facturas/{id}/pdf:
+ *   get:
+ *     summary: Generar PDF de factura
+ *     tags: [Facturas]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID de la factura
+ *     responses:
+ *       200:
+ *         description: PDF generado exitosamente
+ *         content:
+ *           application/pdf:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       404:
+ *         description: Factura no encontrada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: No autorizado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.get('/:id/pdf', authenticate, checkEmpresa, validateUUID, facturaController.getFacturaPDF);
+
 module.exports = router;

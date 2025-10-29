@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reporte de Facturas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 100%;
+            margin: 0;
+            padding: 20px;
+            background-color: white;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #2c3e50;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .company-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .report-title {
+            font-size: 20px;
+            color: #34495e;
+            margin-bottom: 10px;
+        }
+        .report-date {
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+        .filters-section {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #3498db;
+        }
+        .filters-section h3 {
+            margin-top: 0;
+            color: #2c3e50;
+            font-size: 16px;
+        }
+        .filter-item {
+            display: inline-block;
+            margin-right: 20px;
+            margin-bottom: 5px;
+        }
+        .filter-label {
+            font-weight: bold;
+            color: #555;
+        }
+        .summary-section {
+            background: #ecf0f1;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        .summary-item {
+            text-align: center;
+        }
+        .summary-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .summary-label {
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+        .table-container {
+            overflow-x: auto;
+            margin-bottom: 20px;
+        }
+        .report-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            font-size: 12px;
+        }
+        .report-table th,
+        .report-table td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        .report-table th {
+            background-color: #34495e;
+            color: white;
+            font-weight: bold;
+            font-size: 11px;
+        }
+        .report-table tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        .report-table tr:hover {
+            background-color: #e8f4f8;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .status-emitida {
+            background-color: #d5f4e6;
+            color: #27ae60;
+        }
+        .status-borrador {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .status-anulada {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .status-pagada {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            color: #7f8c8d;
+            font-size: 12px;
+        }
+        .page-break {
+            page-break-before: always;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="company-name">{{empresa.nombre}}</div>
+        <div class="report-title">REPORTE DE FACTURAS</div>
+        <div class="report-date">Generado el {{fecha_generacion}}</div>
+    </div>
+
+    <!-- Filtros aplicados -->
+    {{#if filtros.fecha_desde}}
+    <div class="filters-section">
+        <h3>🔍 Filtros Aplicados</h3>
+        {{#if filtros.fecha_desde}}
+        <div class="filter-item">
+            <span class="filter-label">Desde:</span> {{filtros.fecha_desde}}
+        </div>
+        {{/if}}
+        {{#if filtros.fecha_hasta}}
+        <div class="filter-item">
+            <span class="filter-label">Hasta:</span> {{filtros.fecha_hasta}}
+        </div>
+        {{/if}}
+        {{#if filtros.estado}}
+        <div class="filter-item">
+            <span class="filter-label">Estado:</span> {{filtros.estado}}
+        </div>
+        {{/if}}
+        {{#if filtros.cliente}}
+        <div class="filter-item">
+            <span class="filter-label">Cliente:</span> {{filtros.cliente}}
+        </div>
+        {{/if}}
+    </div>
+    {{/if}}
+
+    <!-- Resumen -->
+    <div class="summary-section">
+        <div class="summary-item">
+            <div class="summary-number">{{total_facturas}}</div>
+            <div class="summary-label">Total Facturas</div>
+        </div>
+        <div class="summary-item">
+            <div class="summary-number">${{total_monto}}</div>
+            <div class="summary-label">Monto Total</div>
+        </div>
+        <div class="summary-item">
+            <div class="summary-number">{{#if total_facturas}}{{#divide total_monto total_facturas}}{{/divide}}{{else}}0{{/if}}</div>
+            <div class="summary-label">Promedio por Factura</div>
+        </div>
+    </div>
+
+    <!-- Tabla de facturas -->
+    <div class="table-container">
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th>N° Factura</th>
+                    <th>Fecha</th>
+                    <th>Cliente</th>
+                    <th>NIT/DUI</th>
+                    <th>Estado</th>
+                    <th>Método Pago</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{#each facturas}}
+                <tr>
+                    <td>{{numero_factura}}</td>
+                    <td>{{fecha_emision}}</td>
+                    <td>{{cliente_nombre}}</td>
+                    <td>{{cliente_nit}}</td>
+                    <td>
+                        <span class="status-badge status-{{estado}}">{{estado}}</span>
+                    </td>
+                    <td>{{metodo_pago}}</td>
+                    <td style="text-align: right; font-weight: bold;">${{total}}</td>
+                </tr>
+                {{/each}}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <p><strong>{{empresa.nombre}}</strong></p>
+        <p>Reporte generado por FactuSys el {{fecha_generacion}}</p>
+        <p>Este documento es para uso interno de la empresa</p>
+    </div>
+</body>
+</html>

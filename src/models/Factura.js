@@ -123,10 +123,14 @@ const Factura = sequelize.define('Factura', {
 }, {
     tableName: 'facturas',
     hooks: {
-        beforeCreate: async (factura) => {
-            if (!factura.numero_factura) {
-                const count = await Factura.count();
-                factura.numero_factura = `FAC${String(count + 1).padStart(8, '0')}`;
+        beforeValidate: async (factura) => {
+            if (!factura.serie || (typeof factura.serie === 'string' && factura.serie.trim() === '')) {
+                factura.serie = 'A';
+            }
+            if (!factura.numero_factura || (typeof factura.numero_factura === 'string' && factura.numero_factura.trim() === '')) {
+                const ts = Date.now().toString().slice(-6);
+                const count = await Factura.count().catch(() => 0);
+                factura.numero_factura = `FAC-${String(count + 1).padStart(6, '0')}-${ts}`;
             }
         }
     }

@@ -104,7 +104,30 @@ const Producto = sequelize.define('Producto', {
         }
     }
 }, {
-    tableName: 'productos'
+    tableName: 'productos',
+    hooks: {
+        beforeCreate: async (producto) => {
+            // Generar código automáticamente si no se proporciona
+            if (!producto.codigo || (typeof producto.codigo === 'string' && producto.codigo.trim() === '')) {
+                try {
+                    // Si se proporciona SKU pero no código, usar SKU como código
+                    if (producto.sku && producto.sku.trim() !== '') {
+                        producto.codigo = producto.sku.trim();
+                    } else {
+                        // Generar código automático basado en el conteo + timestamp para asegurar unicidad
+                        const timestamp = Date.now().toString().slice(-6);
+                        const count = await Producto.count().catch(() => 0);
+                        producto.codigo = `PROD${String(count + 1).padStart(4, '0')}${timestamp}`;
+                    }
+                } catch (error) {
+                    // Fallback: usar timestamp + random si falla el conteo
+                    const timestamp = Date.now().toString().slice(-8);
+                    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+                    producto.codigo = `PROD${timestamp}${random}`;
+                }
+            }
+        }
+    }
 });
 
 module.exports = Producto;

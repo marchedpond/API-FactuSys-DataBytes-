@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middlewares/auth');
 const { validateUser } = require('../middlewares/validation');
+const { apiOnly } = require('../middlewares/apiOnly');
 const authController = require('../controllers/authController');
 
 /**
@@ -136,7 +137,8 @@ router.post('/login', authController.login);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/register', validateUser, authController.register);
+// Ruta de registro: solo disponible desde la API directamente (no desde el frontend)
+router.post('/register', apiOnly, validateUser, authController.register);
 
 /**
  * @swagger

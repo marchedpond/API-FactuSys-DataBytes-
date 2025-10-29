@@ -74,7 +74,7 @@ const DetalleFactura = sequelize.define('DetalleFactura', {
         }
     }
 }, {
-    tableName: 'detalles_factura',
+    tableName: 'detalle_facturas',
     hooks: {
         beforeCreate: async (detalle) => {
             // Calcular subtotal

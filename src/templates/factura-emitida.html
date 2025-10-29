@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Factura {{numero_factura}} Emitida</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #27ae60;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .success-icon {
+            font-size: 48px;
+            color: #27ae60;
+            margin-bottom: 15px;
+        }
+        .company-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .invoice-title {
+            font-size: 20px;
+            color: #27ae60;
+            margin-bottom: 10px;
+        }
+        .invoice-number {
+            font-size: 18px;
+            color: #7f8c8d;
+            font-weight: bold;
+        }
+        .info-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #3498db;
+        }
+        .info-section h3 {
+            margin-top: 0;
+            color: #2c3e50;
+            font-size: 18px;
+        }
+        .info-item {
+            margin-bottom: 8px;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #555;
+        }
+        .authorization-box {
+            background: #d5f4e6;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #27ae60;
+            margin-bottom: 20px;
+        }
+        .authorization-box h4 {
+            margin-top: 0;
+            color: #27ae60;
+        }
+        .attachments-info {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #ffc107;
+            margin-bottom: 20px;
+        }
+        .attachments-info h4 {
+            margin-top: 0;
+            color: #856404;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #3498db;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin: 10px 5px;
+        }
+        .btn:hover {
+            background-color: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="success-icon">✅</div>
+            <div class="company-name">{{empresa_nombre}}</div>
+            <div class="invoice-title">FACTURA EMITIDA EXITOSAMENTE</div>
+            <div class="invoice-number">{{numero_factura}}</div>
+        </div>
+
+        <!-- Mensaje principal -->
+        <div class="info-section">
+            <h3>🎉 ¡Factura Emitida Correctamente!</h3>
+            <p>Estimado/a <strong>{{cliente_nombre}}</strong>,</p>
+            <p>Nos complace informarle que su factura <strong>{{numero_factura}}</strong> ha sido emitida exitosamente y autorizada por Hacienda de El Salvador.</p>
+        </div>
+
+        <!-- Información de la factura -->
+        <div class="info-section">
+            <h3>📋 Detalles de la Factura</h3>
+            <div class="info-item">
+                <span class="info-label">Número de Factura:</span> {{numero_factura}}
+            </div>
+            <div class="info-item">
+                <span class="info-label">Fecha de Emisión:</span> {{fecha_emision}}
+            </div>
+            <div class="info-item">
+                <span class="info-label">Cliente:</span> {{cliente_nombre}}
+            </div>
+            <div class="info-item">
+                <span class="info-label">{{#if cliente_nit}}NIT:{{else}}DUI:{{/if}}</span> {{cliente_nit}}
+            </div>
+            <div class="info-item">
+                <span class="info-label">Total:</span> <strong>${{total}}</strong>
+            </div>
+        </div>
+
+        <!-- Información de autorización -->
+        <div class="authorization-box">
+            <h4>✅ Autorización de Hacienda</h4>
+            <div class="info-item">
+                <span class="info-label">Código de Autorización:</span> {{codigo_autorizacion}}
+            </div>
+            <div class="info-item">
+                <span class="info-label">Fecha de Autorización:</span> {{fecha_autorizacion}}
+            </div>
+            <p style="margin-bottom: 0; font-size: 14px; color: #27ae60;">
+                <strong>✓ Documento válido y autorizado por Hacienda de El Salvador</strong>
+            </p>
+        </div>
+
+        <!-- Información de archivos adjuntos -->
+        <div class="attachments-info">
+            <h4>📎 Archivos Adjuntos</h4>
+            <p>En este correo encontrará los siguientes documentos:</p>
+            <ul>
+                <li><strong>Factura_{{numero_factura}}.pdf</strong> - Factura en formato PDF para impresión</li>
+                <li><strong>DTE_{{numero_factura}}.xml</strong> - Documento Tributario Electrónico (XML) para Hacienda</li>
+            </ul>
+        </div>
+
+        <!-- Instrucciones -->
+        <div class="info-section">
+            <h3>📝 Instrucciones</h3>
+            <ul>
+                <li>Conserve el archivo PDF para sus registros contables</li>
+                <li>El archivo XML es requerido para declaraciones fiscales</li>
+                <li>Puede imprimir la factura desde el archivo PDF</li>
+                <li>Para consultas, contacte a {{empresa_nombre}}</li>
+            </ul>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p><strong>{{empresa_nombre}}</strong></p>
+            <p>Este correo fue enviado automáticamente por el sistema FactuSys</p>
+            <p>Para consultas o soporte técnico, contacte a nuestro equipo</p>
+        </div>
+    </div>
+</body>
+</html>

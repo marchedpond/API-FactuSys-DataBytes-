@@ -214,9 +214,10 @@ const deleteCliente = async (req, res, next) => {
             });
         }
 
-        await cliente.destroy();
+        // Eliminación suave con timestamp (columna deleted_at ya existe)
+        await cliente.update({ activo: false, deleted_at: new Date() });
 
-        logger.info(`Cliente ${cliente.nombre} eliminado exitosamente`);
+        logger.info(`Cliente ${cliente.nombre} marcado como eliminado (soft delete)`);
 
         res.status(200).json({
             success: true,

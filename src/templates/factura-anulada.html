@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Factura {{numero_factura}} Anulada</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #e74c3c;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .warning-icon {
+            font-size: 48px;
+            color: #e74c3c;
+            margin-bottom: 15px;
+        }
+        .company-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .invoice-title {
+            font-size: 20px;
+            color: #e74c3c;
+            margin-bottom: 10px;
+        }
+        .invoice-number {
+            font-size: 18px;
+            color: #7f8c8d;
+            font-weight: bold;
+        }
+        .info-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #3498db;
+        }
+        .info-section h3 {
+            margin-top: 0;
+            color: #2c3e50;
+            font-size: 18px;
+        }
+        .info-item {
+            margin-bottom: 8px;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #555;
+        }
+        .cancellation-box {
+            background: #f8d7da;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #e74c3c;
+            margin-bottom: 20px;
+        }
+        .cancellation-box h4 {
+            margin-top: 0;
+            color: #e74c3c;
+        }
+        .reason-box {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #ffc107;
+            margin-bottom: 20px;
+        }
+        .reason-box h4 {
+            margin-top: 0;
+            color: #856404;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="warning-icon">⚠️</div>
+            <div class="company-name">{{empresa_nombre}}</div>
+            <div class="invoice-title">FACTURA ANULADA</div>
+            <div class="invoice-number">{{numero_factura}}</div>
+        </div>
+
+        <!-- Mensaje principal -->
+        <div class="info-section">
+            <h3>📋 Notificación de Anulación</h3>
+            <p>Estimado/a <strong>{{cliente_nombre}}</strong>,</p>
+            <p>Le informamos que la factura <strong>{{numero_factura}}</strong> ha sido anulada y ya no es válida para efectos fiscales.</p>
+        </div>
+
+        <!-- Información de la factura -->
+        <div class="info-section">
+            <h3>📄 Detalles de la Factura Anulada</h3>
+            <div class="info-item">
+                <span class="info-label">Número de Factura:</span> {{numero_factura}}
+            </div>
+            <div class="info-item">
+                <span class="info-label">Fecha de Anulación:</span> {{fecha_anulacion}}
+            </div>
+            <div class="info-item">
+                <span class="info-label">Cliente:</span> {{cliente_nombre}}
+            </div>
+        </div>
+
+        <!-- Motivo de anulación -->
+        <div class="reason-box">
+            <h4>📝 Motivo de Anulación</h4>
+            <p><strong>{{motivo_anulacion}}</strong></p>
+        </div>
+
+        <!-- Información importante -->
+        <div class="cancellation-box">
+            <h4>⚠️ Información Importante</h4>
+            <ul>
+                <li>Esta factura ya <strong>NO es válida</strong> para efectos fiscales</li>
+                <li>No debe ser utilizada para declaraciones de impuestos</li>
+                <li>Si ya realizó el pago, contacte inmediatamente a {{empresa_nombre}}</li>
+                <li>Se generará una nueva factura si es necesario</li>
+            </ul>
+        </div>
+
+        <!-- Instrucciones -->
+        <div class="info-section">
+            <h3>📞 Próximos Pasos</h3>
+            <ul>
+                <li>Si tiene alguna pregunta sobre esta anulación, contacte a {{empresa_nombre}}</li>
+                <li>Si ya realizó el pago, se le reembolsará o se aplicará a una nueva factura</li>
+                <li>No utilice esta factura para ningún trámite fiscal</li>
+                <li>Conserve este correo como comprobante de la anulación</li>
+            </ul>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p><strong>{{empresa_nombre}}</strong></p>
+            <p>Este correo fue enviado automáticamente por el sistema FactuSys</p>
+            <p>Para consultas sobre esta anulación, contacte a nuestro equipo</p>
+        </div>
+    </div>
+</body>
+</html>

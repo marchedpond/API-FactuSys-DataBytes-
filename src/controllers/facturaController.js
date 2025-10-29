@@ -12,6 +12,8 @@ const {
 const { Op } = require('sequelize');
 const logger = require('../utils/logger');
 const { generarXMLFactura, enviarAHacienda } = require('../services/haciendaService');
+const { generarPDFFactura } = require('../services/pdfService');
+const { enviarFacturaEmitida, enviarFacturaAnulada } = require('../services/emailService');
 
 // Obtener todas las facturas
 const getFacturas = async (req, res, next) => {
@@ -336,7 +338,13 @@ const createFactura = async (req, res, next) => {
             data: { factura: facturaCompleta }
         });
     } catch (error) {
-        await transaction.rollback();
+        try {
+            if (transaction && transaction.finished !== 'commit') {
+                await transaction.rollback();
+            }
+        } catch (rbErr) {
+            logger.error('Error al hacer rollback de la transacción:', rbErr);
+        }
         logger.error('Error creando factura:', error);
         next(error);
     }
@@ -402,7 +410,27 @@ const emitirFactura = async (req, res, next) => {
         const xmlFactura = await generarXMLFactura(factura);
 
         // Enviar a Hacienda (simulado)
-        const respuestaHacienda = await enviarAHacienda(xmlFactura);
+        const respuestaHacienda = await enviarAHacienda(xmlFactura, factura);
+
+        // Verificar si la respuesta de Hacienda fue exitosa
+        if (respuestaHacienda.codigoRespuesta !== '200') {
+            return res.status(400).json({
+                success: false,
+                message: 'Error al enviar factura a Hacienda',
+                data: {
+                    errores: respuestaHacienda.errores || [respuestaHacienda.descripcionRespuesta]
+                }
+            });
+        }
+
+        // Generar PDF de la factura
+        let pdfBuffer = null;
+        try {
+            pdfBuffer = await generarPDFFactura(factura);
+            logger.info(`PDF generado para factura ${factura.numero_factura}`);
+        } catch (pdfError) {
+            logger.warn(`Error generando PDF para factura ${factura.numero_factura}:`, pdfError.message);
+        }
 
         // Actualizar factura
         await factura.update({
@@ -413,14 +441,40 @@ const emitirFactura = async (req, res, next) => {
             fecha_autorizacion: respuestaHacienda.fechaAutorizacion ? new Date(respuestaHacienda.fechaAutorizacion) : null
         });
 
+        // Enviar correo electrónico con PDF y XML
+        let resultadoCorreo = null;
+        try {
+            if (pdfBuffer) {
+                resultadoCorreo = await enviarFacturaEmitida(factura, pdfBuffer, xmlFactura);
+                logger.info(`Correo enviado para factura ${factura.numero_factura}`, {
+                    messageId: resultadoCorreo.messageId
+                });
+            } else {
+                logger.warn(`No se pudo enviar correo para factura ${factura.numero_factura} - PDF no generado`);
+            }
+        } catch (emailError) {
+            logger.error(`Error enviando correo para factura ${factura.numero_factura}:`, emailError.message);
+            // No fallar la emisión por error de correo
+        }
+
         logger.info(`Factura ${factura.numero_factura} emitida exitosamente`);
 
         res.status(200).json({
             success: true,
             message: 'Factura emitida exitosamente',
             data: {
-                factura,
-                respuestaHacienda
+                factura: {
+                    ...factura.toJSON(),
+                    estado: 'emitida',
+                    codigo_autorizacion: respuestaHacienda.codigoAutorizacion,
+                    fecha_autorizacion: respuestaHacienda.fechaAutorizacion
+                },
+                respuestaHacienda: {
+                    codigoRespuesta: respuestaHacienda.codigoRespuesta,
+                    codigoAutorizacion: respuestaHacienda.codigoAutorizacion
+                },
+                correoEnviado: resultadoCorreo ? true : false,
+                pdfGenerado: pdfBuffer ? true : false
             }
         });
     } catch (error) {
@@ -439,7 +493,17 @@ const anularFactura = async (req, res, next) => {
             where: {
                 id,
                 empresa_id: req.user.empresa_id
-            }
+            },
+            include: [
+                {
+                    model: Cliente,
+                    as: 'cliente'
+                },
+                {
+                    model: Empresa,
+                    as: 'empresa'
+                }
+            ]
         });
 
         if (!factura) {
@@ -461,11 +525,31 @@ const anularFactura = async (req, res, next) => {
             observaciones: motivo ? `${factura.observaciones || ''}\nAnulada: ${motivo}`.trim() : factura.observaciones
         });
 
+        // Enviar correo de anulación
+        let resultadoCorreo = null;
+        try {
+            resultadoCorreo = await enviarFacturaAnulada(factura, motivo || 'Sin motivo especificado');
+            logger.info(`Correo de anulación enviado para factura ${factura.numero_factura}`, {
+                messageId: resultadoCorreo.messageId
+            });
+        } catch (emailError) {
+            logger.error(`Error enviando correo de anulación para factura ${factura.numero_factura}:`, emailError.message);
+            // No fallar la anulación por error de correo
+        }
+
         logger.info(`Factura ${factura.numero_factura} anulada. Motivo: ${motivo}`);
 
         res.status(200).json({
             success: true,
-            message: 'Factura anulada exitosamente'
+            message: 'Factura anulada exitosamente',
+            data: {
+                factura: {
+                    id: factura.id,
+                    numero_factura: factura.numero_factura,
+                    estado: 'anulada'
+                },
+                correoEnviado: resultadoCorreo ? true : false
+            }
         });
     } catch (error) {
         logger.error('Error anulando factura:', error);
@@ -517,11 +601,87 @@ const getFacturaStats = async (req, res, next) => {
     }
 };
 
+// Generar PDF de factura
+const getFacturaPDF = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        // Buscar la factura con todos sus detalles
+        const factura = await Factura.findOne({
+            where: {
+                id,
+                empresa_id: req.user.empresa_id
+            },
+            include: [
+                {
+                    model: Cliente,
+                    as: 'cliente',
+                    attributes: ['id', 'nombre', 'apellido', 'nit', 'dui', 'direccion', 'telefono', 'email']
+                },
+                {
+                    model: Empresa,
+                    as: 'empresa',
+                    attributes: ['id', 'nombre', 'nit', 'direccion', 'telefono', 'email']
+                },
+                {
+                    model: DetalleFactura,
+                    as: 'detalles',
+                    include: [
+                        {
+                            model: Producto,
+                            as: 'producto',
+                            attributes: ['id', 'nombre', 'descripcion', 'precio_venta']
+                        },
+                        {
+                            model: DetalleImpuesto,
+                            as: 'impuestos',
+                            include: [
+                                {
+                                    model: Impuesto,
+                                    as: 'impuesto',
+                                    attributes: ['id', 'nombre', 'porcentaje']
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        });
+
+        if (!factura) {
+            return res.status(404).json({
+                success: false,
+                message: 'Factura no encontrada'
+            });
+        }
+
+        // Generar PDF
+        const pdfBuffer = await generarPDFFactura(factura);
+
+        // Configurar headers para descarga
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="factura-${factura.numero_factura}.pdf"`);
+        res.setHeader('Content-Length', pdfBuffer.length);
+
+        res.send(pdfBuffer);
+
+        logger.info(`PDF generado para factura ${factura.numero_factura}`, {
+            facturaId: factura.id,
+            usuarioId: req.user.id
+        });
+
+    } catch (error) {
+        logger.error('Error generando PDF de factura:', error);
+        next(error);
+    }
+};
+
 module.exports = {
     getFacturas,
     getFacturaById,
     createFactura,
     emitirFactura,
     anularFactura,
-    getFacturaStats
+    getFacturaStats,
+    getFacturaPDF
 };
